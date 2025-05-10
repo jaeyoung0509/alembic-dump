@@ -1,0 +1,39 @@
+{
+    "python.formatting.provider": "black",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit", // isort와 충돌 가능성 있음, ruff로 통합 고려
+        "source.fixAll": "explicit" // ruff로 통합 고려
+    },
+    "python.linting.enabled": true,
+    "python.linting.ruffEnabled": true,
+    // "python.linting.ruffPath": "ruff", // .venv에 설치된 ruff를 사용한다면 경로 지정 불필요할 수 있음
+    // "python.linting.ruffArgs": [],
+    "python.linting.mypyEnabled": false,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": false,
+    // isort 설정은 ruff가 처리하도록 통합하는 것을 추천
+    // "python.sortImports.args": [
+    //     "--profile",
+    //     "black"
+    // ],
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.useLibraryCodeForTypes": true,
+    "python.analysis.autoSearchPaths": true, // 이 설정이 true이면 .env 파일의 PYTHONPATH 등을 잘 활용함
+    // "python.analysis.stubPath": "typings", // typings 폴더를 사용한다면 유지
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    // "python.testing.cwd": "${workspaceFolder}" // 필요시 명시 (기본값이 워크스페이스 폴더)
+    // Ruff를 포맷터 및 import 정렬기로 사용하기 위한 추가 설정 (권장)
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff", // Ruff를 기본 포맷터로 설정
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit" // Ruff가 import 정렬도 담당
+        }
+    }
+}
