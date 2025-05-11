@@ -143,7 +143,7 @@ dmypy.json
 # Cython cache files
 .cython_cache/
 
-# VS Code
+# VS Code   
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
