@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "alembic-dump"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python library to dump, load, and mask data between databases in Alembic-managed environments, with SSH tunnel support."
 readme = "README.md"
 requires-python = ">=3.9"
