@@ -11,18 +11,25 @@ from src.alembic_dump.utils import (
 
 def test_get_sorted_tables_and_circular():
     metadata = MetaData()
-    t1 = Table('parent', metadata, Column('id', Integer, primary_key=True))
-    t2 = Table('child', metadata, Column('id', Integer, primary_key=True), Column('parent_id', Integer, ForeignKey('parent.id')))
+    t1 = Table("parent", metadata, Column("id", Integer, primary_key=True))
+    t2 = Table(
+        "child",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Column("parent_id", Integer, ForeignKey("parent.id")),
+    )
     sorted_tables = get_sorted_tables(metadata)
-    assert sorted_tables[0].name == 'parent'
-    assert sorted_tables[1].name == 'child'
+    assert sorted_tables[0].name == "parent"
+    assert sorted_tables[1].name == "child"
     cycles = detect_circular_dependencies(metadata)
     assert cycles == []
+
 
 def test_chunk_iterable():
     data = list(range(7))
     chunks = list(chunk_iterable(data, 3))
-    assert chunks == [[0,1,2],[3,4,5],[6]]
+    assert chunks == [[0, 1, 2], [3, 4, 5], [6]]
+
 
 def test_mask_value_hash():
     rule = {"strategy": "hash", "hash_salt": "abc"}
@@ -31,13 +38,16 @@ def test_mask_value_hash():
     assert v1 == v2
     assert v1 != "hello"
 
+
 def test_mask_value_partial():
     rule = {"strategy": "partial", "partial_keep_chars": 2}
     assert mask_value("abcdef", rule) == "****ef"
 
+
 def test_mask_value_null():
     rule = {"strategy": "null"}
     assert mask_value("something", rule) is None
+
 
 def test_apply_masking():
     row = {"name": "홍길동", "email": "hong@test.com"}
