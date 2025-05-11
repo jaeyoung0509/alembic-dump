@@ -8,6 +8,24 @@ version = "0.1.0"
 description = "A Python library to dump, load, and mask data between databases in Alembic-managed environments, with SSH tunnel support."
 readme = "README.md"
 requires-python = ">=3.9"
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+
+
 license = { file = "LICENSE" }
 authors = [{ name = "Jaeyoung", email = "jaeyoung0509@naver.com" }]
 keywords = [
@@ -49,27 +67,13 @@ dev = [
     "psycopg2-binary>=2.9.5",
     "sphinx",
     "sphinx-rtd-theme",
+    "build",
     "twine>=4.0.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/jaeyoung0509/alembic-dump"
 
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Database",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Utilities",
-]
 
 [tool.black]
 line-length = 88
@@ -106,7 +110,7 @@ exclude = [
     "build",
     "dist",
     "node_modules",
-    "venv",
+    ".venv",
     "tests/alembic_test_env/versions",
     "docs",
 ]
