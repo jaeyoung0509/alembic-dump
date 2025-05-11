@@ -8,9 +8,11 @@ POSTGRES_PASSWORD = "testpass"
 POSTGRES_USER = "testuser"
 POSTGRES_DB = "testdb"
 
+
 @pytest.fixture(scope="session")
 def docker_client():
     return docker.from_env()
+
 
 @pytest.fixture(scope="session")
 def postgres_containers(docker_client):
@@ -35,17 +37,20 @@ def postgres_containers(docker_client):
     for c in containers:
         c.stop()
 
+
 @pytest.fixture(scope="session")
 def pg_conn_infos(postgres_containers):
     infos = []
     for c in postgres_containers:
         c.reload()
         port = c.attrs["NetworkSettings"]["Ports"]["5432/tcp"][0]["HostPort"]
-        infos.append({
-            "host": "127.0.0.1",
-            "port": int(port),
-            "user": POSTGRES_USER,
-            "password": POSTGRES_PASSWORD,
-            "database": POSTGRES_DB,
-        })
+        infos.append(
+            {
+                "host": "127.0.0.1",
+                "port": int(port),
+                "user": POSTGRES_USER,
+                "password": POSTGRES_PASSWORD,
+                "database": POSTGRES_DB,
+            }
+        )
     return infos
