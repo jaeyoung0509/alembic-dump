@@ -1,0 +1,55 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test-and-lint:
+    name: Test and Lint (Python ${{ matrix.python-version }}) # 잡 이름을 더 명확하게
+    runs-on: ubuntu-latest
+    strategy: # 여러 파이썬 버전에 대해 테스트하려면 strategy.matrix 사용
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"] # 프로젝트에서 지원하는 버전들로 수정
+      fail-fast: false # 하나의 버전 테스트가 실패해도 다른 버전 테스트는 계속 진행
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install UV (python package installer)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          uv venv .venv --python ${{ matrix.python-version }} # 각 파이썬 버전에 맞는 가상환경 생성
+          source .venv/bin/activate
+          uv pip install ".[dev]" # dev 의존성에 pytest, ruff, black 등 포함 가정
+
+      - name: Run linters (Ruff and Black)
+        if: always() 
+        run: |
+          source .venv/bin/activate
+          echo "--- Checking formatting with Black ---"
+          uv run black . --check
+          echo "--- Linting with Ruff ---"
+          uv run ruff check .
+          # 필요하다면 ruff format --check . 도 추가
+
+      - name: Run tests (pytest)
+        run: |
+          source .venv/bin/activate
+          uv run pytest
