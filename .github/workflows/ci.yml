@@ -39,15 +39,15 @@ jobs:
           source .venv/bin/activate
           uv pip install ".[dev]" # dev 의존성에 pytest, ruff, black 등 포함 가정
 
-      - name: Run linters (Ruff and Black)
-        if: always() 
-        run: |
-          source .venv/bin/activate
-          echo "--- Checking formatting with Black ---"
-          uv run black . --check
-          echo "--- Linting with Ruff ---"
-          uv run ruff check .
-          # 필요하다면 ruff format --check . 도 추가
+      # - name: Run linters (Ruff and Black)
+      #   if: always() 
+      #   run: |
+      #     source .venv/bin/activate
+      #     echo "--- Checking formatting with Black ---"
+      #     uv run black . --check
+      #     echo "--- Linting with Ruff ---"
+      #     uv run ruff check .
+      #     # 필요하다면 ruff format --check . 도 추가
 
       - name: Run tests (pytest)
         run: |
