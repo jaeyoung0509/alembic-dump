@@ -9,6 +9,7 @@ def test_masking_manager_email():
     masked = mm.mask_value("hong@test.com", rule)
     assert masked.startswith("h*")
 
+
 def test_masking_manager_hash():
     rule = MaskingRule(strategy="hash")
     config = MaskingConfig(rules={"users": {"id": rule}})
@@ -17,6 +18,7 @@ def test_masking_manager_hash():
     v2 = mm.mask_value("123", rule)
     assert v1 == v2
     assert v1 != "123"
+
 
 def test_masking_manager_name():
     rule = MaskingRule(strategy="name")

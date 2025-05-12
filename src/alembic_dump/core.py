@@ -44,13 +44,13 @@ def dump_and_load(settings: AppSettings, alembic_dir: str):
     """메인 데이터 마이그레이션 워크플로우"""
     # SSH 터널링 (필요시)
     from_ctx = (
-        create_ssh_tunnel(settings.ssh_tunnel, settings.source_db)
-        if settings.ssh_tunnel
+        create_ssh_tunnel(settings.source_ssh_tunnel, settings.source_db)
+        if settings.source_ssh_tunnel
         else None
     )
     to_ctx = (
-        create_ssh_tunnel(settings.ssh_tunnel, settings.target_db)
-        if settings.ssh_tunnel
+        create_ssh_tunnel(settings.target_ssh_tunnel, settings.target_db)
+        if settings.target_ssh_tunnel
         else None
     )
 

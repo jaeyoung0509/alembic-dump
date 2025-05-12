@@ -8,7 +8,6 @@ from .config import DBConfig
 
 
 class DBManager:
-
     def __init__(self, db_config: DBConfig) -> None:
         self.config = db_config
         self._engine: Optional[Engine] = None
@@ -33,13 +32,11 @@ class DBManager:
             return self.get_metadata().sorted_tables
         except Exception as exc:
             raise RuntimeError(f"failed to get sorted table: {exc}") from exc
-    
+
     def get_session(self) -> Session:
         if self._session_maker is None:
             self._session_maker = sessionmaker(bind=self.engine)
         return self._session_maker()
-
-
 
     def get_table_dependencies(self) -> list[tuple[str, list[str]]]:
         inspector = inspect(self.engine)
@@ -47,7 +44,7 @@ class DBManager:
 
         for table_name in inspector.get_table_names():
             foreign_keys = inspector.get_foreign_keys(table_name)
-            referenced_tables = [fk['referred_table'] for fk in foreign_keys]
+            referenced_tables = [fk["referred_table"] for fk in foreign_keys]
             dependencies.append((table_name, referenced_tables))
         return dependencies
 
@@ -58,7 +55,7 @@ class DBManager:
             self._metadata = None
             self._session_maker = None
 
-    def __enter__(self) -> 'DBManager':
+    def __enter__(self) -> "DBManager":
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -67,6 +64,4 @@ class DBManager:
 
 def create_db_manager(db_config: DBConfig) -> DBManager:
     """DB 매니저 생성 헬퍼 함수"""
-    return DBManager(db_config)            
-        
-    
+    return DBManager(db_config)
