@@ -1,13 +1,15 @@
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Optional
 
 from sshtunnel import SSHTunnelForwarder  # type: ignore
+from typing_extensions import Self
 
 from .config import DBConfig, SSHConfig
 
 
 class SSHTunnelManager:
-    def __init__(self, ssh_config: SSHConfig, db_config: DBConfig):
+    def __init__(self, ssh_config: SSHConfig, db_config: DBConfig) -> None:
         self.ssh_config = ssh_config
         self.db_config = db_config
         self._tunnel: Optional[SSHTunnelForwarder] = None
@@ -51,7 +53,7 @@ class SSHTunnelManager:
             self._tunnel = None
 
     @contextmanager
-    def tunnel(self):
+    def tunnel(self) -> Generator[Self, None, None]:
         try:
             self.start()
             yield self
