@@ -1,5 +1,3 @@
-name: Continuous Integration
-
 on:
   push:
     branches:
@@ -30,7 +28,6 @@ jobs:
         run: |
           source .venv/bin/activate
           uv run pytest
-
   test-3-10:
     name: Test and Lint (Python 3.10)
     runs-on: ubuntu-latest
@@ -50,7 +47,6 @@ jobs:
         run: |
           source .venv/bin/activate
           uv run pytest
-
   test-3-11:
     name: Test and Lint (Python 3.11)
     runs-on: ubuntu-latest
