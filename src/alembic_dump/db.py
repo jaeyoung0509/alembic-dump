@@ -1,4 +1,5 @@
-from typing import Any, Optional
+import types
+from typing import Optional
 
 from sqlalchemy import MetaData, Table, create_engine, inspect
 from sqlalchemy.engine import Engine
@@ -58,7 +59,12 @@ class DBManager:
     def __enter__(self) -> "DBManager":
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[types.TracebackType],
+    ) -> None:
         self.close()
 
 

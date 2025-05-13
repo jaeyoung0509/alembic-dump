@@ -6,6 +6,9 @@ from sqlalchemy import MetaData, Table, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
+from alembic_dump.config import DBConfig
+from alembic_dump.ssh import SSHTunnelManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -185,3 +188,16 @@ def apply_masking(
         else:
             masked[col] = val
     return masked
+
+
+def get_db_config_for_connection(
+    original_db_config: DBConfig,
+    active_ssh_tunnel: Optional[SSHTunnelManager],
+    db_name_for_log: str = "Database",
+) -> DBConfig:
+    db_config_to_use = original_db_config.model_copy(deep=True)
+    if active_ssh_tunnel is None:
+        return db_config_to_use
+    db_config_to_use.port = active_ssh_tunnel.local_bind_address[1]
+    db_config_to_use.host = active_ssh_tunnel.local_bind_address[0]
+    return db_config_to_use
