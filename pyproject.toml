@@ -1,127 +1,125 @@
 [build-system]
-requires = ["hatchling"]
 build-backend = "hatchling.build"
+requires = ["hatchling"]
 
 [project]
-name = "alembic-dump"
-version = "0.1.2"
 description = "A Python library to dump, load, and mask data between databases in Alembic-managed environments, with SSH tunnel support."
+name = "alembic-dump"
 readme = "README.md"
 requires-python = ">=3.9"
+version = "0.1.6"
 
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Database",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Utilities",
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Database",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities",
 ]
 
-
-license = { file = "LICENSE" }
-authors = [{ name = "Jaeyoung", email = "jaeyoung0509@naver.com" }]
-keywords = [
-    "alembic",
-    "database",
-    "db",
-    "dump",
-    "load",
-    "copy",
-    "masking",
-    "anonymization",
-    "migration",
-    "schema",
-    "sqlalchemy",
-    "postgresql",
-    "mysql",
-    "ssh",
-    "tunnel",
-]
+authors = [{name = "Jaeyoung", email = "jaeyoung0509@naver.com"}]
 dependencies = [
-    "sqlalchemy>=2.0.0",
-    "alembic>=1.12.0",
-    "sshtunnel>=0.4.0",
-    "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    "faker>=18.0.0",
-    "python-dotenv>=1.0.0",
+  "sqlalchemy>=2.0.0",
+  "alembic>=1.12.0",
+  "sshtunnel>=0.4.0",
+  "pydantic>=2.0.0",
+  "pydantic-settings>=2.0.0",
+  "faker>=18.0.0",
+  "python-dotenv>=1.0.0",
 ]
+keywords = [
+  "alembic",
+  "database",
+  "db",
+  "dump",
+  "load",
+  "copy",
+  "masking",
+  "anonymization",
+  "migration",
+  "schema",
+  "sqlalchemy",
+  "postgresql",
+  "mysql",
+  "ssh",
+  "tunnel",
+]
+license = {file = "LICENSE"}
 
 [project.optional-dependencies]
 dev = [
-    "black",
-    "ruff",
-    "isort",
-    "mypy",
-    "pytest>=8.0.0",
-    "pytest-cov",
-    "docker>=7.0.0",
-    "psycopg2-binary>=2.9.5",
-    "sphinx",
-    "sphinx-rtd-theme",
-    "build",
-    "twine>=4.0.0",
+  "black",
+  "ruff",
+  "isort",
+  "mypy",
+  "pytest>=8.0.0",
+  "pytest-cov",
+  "docker>=7.0.0",
+  "psycopg2-binary>=2.9.5",
+  "sphinx",
+  "sphinx-rtd-theme",
+  "build",
+  "twine>=4.0.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/jaeyoung0509/alembic-dump"
-
 
 [tool.black]
 line-length = 88
 target-version = ['py39']
 
 [tool.isort]
-profile = "black"
+include_trailing_comma = true
 line_length = 88
 multi_line_output = 3
-include_trailing_comma = true
+profile = "black"
 
 [tool.ruff]
-line-length = 88
-target-version = "py39"
-select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM", "TID251", "ANN"]
-ignore = []
-fix = true
 exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    ".venv",
-    "tests/alembic_test_env/versions",
-    "docs",
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".hg",
+  ".mypy_cache",
+  ".nox",
+  ".pants.d",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  "__pypackages__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "node_modules",
+  ".venv",
+  "tests/alembic_test_env/versions",
+  "docs",
 ]
+fix = true
+ignore = []
+line-length = 88
+select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM", "TID251", "ANN"]
+target-version = "py39"
 
 [tool.pyright]
 include = ["src", "tests"]
 pythonVersion = "3.9"
-typeCheckingMode = "basic"
 reportMissingTypeStubs = true
 reportUnknownMemberType = "warning"
 reportUnknownVariableType = "warning"
+typeCheckingMode = "basic"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/alembic_dump"]
@@ -129,8 +127,8 @@ packages = ["src/alembic_dump"]
 # Pytest Marker
 [tool.pytest.ini_options]
 markers = [
-    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+  "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
 ]
-python_files = "test_*.py tests_*.py *_test.py *_tests.py"
 python_classes = "Test* Tests*"
+python_files = "test_*.py tests_*.py *_test.py *_tests.py"
 python_functions = "test_* tests_*"
