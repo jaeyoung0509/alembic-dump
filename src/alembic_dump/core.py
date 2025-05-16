@@ -17,11 +17,6 @@ from .utils import (
 )
 
 
-def get_alembic_revision(engine: Engine) -> Optional[str]:
-    """DB 엔진에서 alembic revision 조회"""
-    return get_alembic_version(engine)
-
-
 def run_alembic_cmd(
     alembic_dir: str, db_url: str, cmd: str, revision: str = ""
 ) -> None:
@@ -39,15 +34,18 @@ def run_alembic_cmd(
     subprocess.run(args, check=True)
 
 
-def sync_schema(settings: AppSettings, alembic_dir: str) -> None:
+def sync_schema(from_db: Engine, to_db: Engine, alembic_dir: str) -> None:
     """to DB를 from DB revision에 맞게 다운/업그레이드"""
-    # 1. from DB revision 확인
-    with create_db_manager(settings.source_db) as from_db:
-        from_rev = get_alembic_revision(from_db.engine)
-        if from_rev is None:
-            raise ValueError("from_db에서 alembic revision을 찾을 수 없습니다.")
-    # 2. to DB downgrade/upgrade
-    to_db_url = f"{settings.target_db.driver}://{settings.target_db.username}:{settings.target_db.password.get_secret_value()}@{settings.target_db.host}:{settings.target_db.port or 5432}/{settings.target_db.database}"
+    from_rev = get_alembic_version(from_db)
+    if from_rev is None:
+        raise ValueError("from_db에서 alembic revision을 찾을 수 없습니다.")
+
+    to_db_url = to_db.url.render_as_string(hide_password=False)
+    target_current_rev = get_alembic_version(to_db)
+
+    if target_current_rev is None:
+        run_alembic_cmd(alembic_dir, to_db_url, "upgrade", from_rev)
+        return
     run_alembic_cmd(alembic_dir, to_db_url, "downgrade", "base")
     run_alembic_cmd(alembic_dir, to_db_url, "upgrade", from_rev)
 
@@ -87,7 +85,7 @@ def dump_and_load(settings: AppSettings, alembic_dir: str) -> None:
             create_db_manager(target_db_config) as to_db,
         ):
             # 스키마 동기화
-            sync_schema(settings, alembic_dir)
+            sync_schema(from_db.engine, to_db.engine, alembic_dir)
 
             from_session = from_db.get_session()
             to_session = to_db.get_session()
