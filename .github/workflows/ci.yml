@@ -1,0 +1,68 @@
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test-3-9:
+    name: Test and Lint (Python 3.9)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - name: Setup venv and install dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv venv .venv --python 3.9
+          source .venv/bin/activate
+          uv pip install ".[dev]"
+      - name: Run tests
+        run: |
+          source .venv/bin/activate
+          uv run pytest
+  test-3-10:
+    name: Test and Lint (Python 3.10)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Setup venv and install dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv venv .venv --python 3.10
+          source .venv/bin/activate
+          uv pip install ".[dev]"
+      - name: Run tests
+        run: |
+          source .venv/bin/activate
+          uv run pytest
+  test-3-11:
+    name: Test and Lint (Python 3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Setup venv and install dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv venv .venv --python 3.11
+          source .venv/bin/activate
+          uv pip install ".[dev]"
+      - name: Run tests
+        run: |
+          source .venv/bin/activate
+          uv run pytest
