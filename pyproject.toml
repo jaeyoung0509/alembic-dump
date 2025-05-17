@@ -128,6 +128,7 @@ packages = ["src/alembic_dump"]
 [tool.pytest.ini_options]
 markers = [
   "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+  "integration_ssh: marks tests that require SSH integration",
 ]
 python_classes = "Test* Tests*"
 python_files = "test_*.py tests_*.py *_test.py *_tests.py"
