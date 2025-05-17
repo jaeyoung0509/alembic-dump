@@ -104,6 +104,8 @@ def get_alembic_version(engine: Engine) -> Optional[str]:
                 return row[0]
     except SQLAlchemyError as e:
         logger.warning(f"Alembic version 조회 실패: {e}")
+    except Exception as exc:
+        logger.warning(f"Alembic version 조회 실패: {exc}")
     return None
 
 
