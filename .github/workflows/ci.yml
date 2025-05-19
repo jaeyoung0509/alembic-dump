@@ -23,7 +23,7 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           uv venv .venv --python 3.9
           source .venv/bin/activate
-          uv pip install ".[dev]"
+          uv pip install ".[dev,aws,vault]"
       - name: Run tests
         run: |
           source .venv/bin/activate
@@ -42,7 +42,7 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           uv venv .venv --python 3.10
           source .venv/bin/activate
-          uv pip install ".[dev]"
+          uv pip install ".[dev,aws,vault]"
       - name: Run tests
         run: |
           source .venv/bin/activate
@@ -61,7 +61,7 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           uv venv .venv --python 3.11
           source .venv/bin/activate
-          uv pip install ".[dev]"
+          uv pip install ".[dev,aws,vault]"
       - name: Run tests
         run: |
           source .venv/bin/activate
