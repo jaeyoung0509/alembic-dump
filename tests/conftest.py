@@ -7,6 +7,8 @@ import time
 from collections.abc import Generator
 from typing import Any, Optional, Union
 
+import boto3
+import hvac
 import psycopg2
 import pytest
 from docker import DockerClient, errors, from_env
@@ -19,6 +21,10 @@ POSTGRES_DB = "testdb"
 
 DOCKER_NETWORK_NAME = "integration_test_network"
 
+# Secret Management Test Constants
+LOCALSTACK_IMAGE = "localstack/localstack:latest"
+VAULT_IMAGE = "hashicorp/vault:latest"
+VAULT_ROOT_TOKEN = "root"
 
 logger = logging.getLogger(__name__)
 
@@ -318,3 +324,184 @@ def ssh_server_container(
 @pytest.fixture(scope="session")
 def alembic_test_env_dir() -> str:
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "alembic_test_env"))
+
+
+@pytest.fixture(scope="session")
+def localstack_container(
+    docker_client_session: DockerClient, test_docker_network: str
+) -> dict[str, Union[str, int, Container]]:
+    """LocalStack container for AWS Secrets Manager emulation"""
+    container_name = f"localstack_secrets_test_{int(time.time())}"
+    try:
+        logger.info(f"Creating LocalStack container: {container_name}")
+        container = docker_client_session.containers.run(
+            LOCALSTACK_IMAGE,
+            name=container_name,
+            environment={
+                "SERVICES": "secretsmanager",
+                "DEBUG": "1",
+                "DATA_DIR": "/tmp/localstack/data",
+                "DOCKER_HOST": "unix:///var/run/docker.sock",
+            },
+            ports={"4566/tcp": None},  # Random port allocation
+            volumes=[
+                f"{os.path.abspath('./volume')}:/var/lib/localstack",
+                "/var/run/docker.sock:/var/run/docker.sock",
+            ],
+            detach=True,
+            remove=True,
+            network=test_docker_network,
+        )
+
+        # Wait for LocalStack to be ready
+        for i in range(15):
+            time.sleep(2)
+            container.reload()
+            if container.status != "running":
+                logs = container.logs().decode("utf-8")
+                logger.error(f"Container {container.name} is not running: {logs}")
+                raise RuntimeError(f"Container {container.name} failed to start.")
+
+            host_port_info = container.attrs["NetworkSettings"]["Ports"].get("4566/tcp")
+            if not host_port_info or not host_port_info[0].get("HostPort"):
+                logger.debug(f"Container {container.name} port info not available yet.")
+                continue
+
+            host_port = host_port_info[0]["HostPort"]
+            try:
+                # Test LocalStack connection
+                session = boto3.session.Session()
+                client = session.client(
+                    "secretsmanager",
+                    endpoint_url=f"http://localhost:{host_port}",
+                    region_name="us-east-1",
+                    aws_access_key_id="test",
+                    aws_secret_access_key="test",
+                )
+                client.list_secrets()  # Test API call
+                logger.info(
+                    f"LocalStack container '{container_name}' is ready on host port {host_port}."
+                )
+                return {
+                    "name": container_name,
+                    "host_for_docker_network": container_name,
+                    "port_internal": 4566,
+                    "host_for_host_machine": "localhost",
+                    "port_on_host": int(host_port),
+                    "container_obj": container,
+                    "endpoint_url": f"http://localhost:{host_port}",
+                }
+            except Exception as e:
+                logger.debug(
+                    f"Waiting for LocalStack container '{container_name}' (attempt {i + 1}/15)... Error: {e}"
+                )
+
+        logs = container.logs().decode("utf-8", errors="ignore")
+        logger.error(
+            f"LocalStack container '{container_name}' did not become ready in time. Logs:\n{logs}"
+        )
+        raise TimeoutError(
+            f"LocalStack container '{container_name}' did not become ready in time."
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Failed to start/setup LocalStack container '{container_name}': {e}",
+            exc_info=True,
+        )
+        if "container" in locals() and container:
+            try:
+                container.remove(force=True)
+                logger.info(
+                    f"Force removed container '{container_name}' after startup failure."
+                )
+            except Exception:
+                pass
+        raise
+
+
+@pytest.fixture(scope="session")
+def vault_container(
+    docker_client_session: DockerClient, test_docker_network: str
+) -> dict[str, Union[str, int, Container]]:
+    """HashiCorp Vault container for secret management testing"""
+    container_name = f"vault_test_{int(time.time())}"
+    try:
+        logger.info(f"Creating Vault container: {container_name}")
+        container = docker_client_session.containers.run(
+            VAULT_IMAGE,
+            name=container_name,
+            environment={
+                "VAULT_DEV_ROOT_TOKEN_ID": VAULT_ROOT_TOKEN,
+                "VAULT_DEV_LISTEN_ADDRESS": "0.0.0.0:8200",
+            },
+            ports={"8200/tcp": None},  # Random port allocation
+            cap_add=["IPC_LOCK"],
+            command="server -dev -dev-root-token-id=root",
+            detach=True,
+            remove=True,
+            network=test_docker_network,
+        )
+
+        # Wait for Vault to be ready
+        for i in range(15):
+            time.sleep(2)
+            container.reload()
+            if container.status != "running":
+                logs = container.logs().decode("utf-8")
+                logger.error(f"Container {container.name} is not running: {logs}")
+                raise RuntimeError(f"Container {container.name} failed to start.")
+
+            host_port_info = container.attrs["NetworkSettings"]["Ports"].get("8200/tcp")
+            if not host_port_info or not host_port_info[0].get("HostPort"):
+                logger.debug(f"Container {container.name} port info not available yet.")
+                continue
+
+            host_port = host_port_info[0]["HostPort"]
+            try:
+                # Test Vault connection
+                client = hvac.Client(
+                    url=f"http://localhost:{host_port}",
+                    token=VAULT_ROOT_TOKEN,
+                )
+                if client.is_authenticated():
+                    logger.info(
+                        f"Vault container '{container_name}' is ready on host port {host_port}."
+                    )
+                    return {
+                        "name": container_name,
+                        "host_for_docker_network": container_name,
+                        "port_internal": 8200,
+                        "host_for_host_machine": "localhost",
+                        "port_on_host": int(host_port),
+                        "container_obj": container,
+                        "token": VAULT_ROOT_TOKEN,
+                        "url": f"http://localhost:{host_port}",
+                    }
+            except Exception as e:
+                logger.debug(
+                    f"Waiting for Vault container '{container_name}' (attempt {i + 1}/15)... Error: {e}"
+                )
+
+        logs = container.logs().decode("utf-8", errors="ignore")
+        logger.error(
+            f"Vault container '{container_name}' did not become ready in time. Logs:\n{logs}"
+        )
+        raise TimeoutError(
+            f"Vault container '{container_name}' did not become ready in time."
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Failed to start/setup Vault container '{container_name}': {e}",
+            exc_info=True,
+        )
+        if "container" in locals() and container:
+            try:
+                container.remove(force=True)
+                logger.info(
+                    f"Force removed container '{container_name}' after startup failure."
+                )
+            except Exception:
+                pass
+        raise

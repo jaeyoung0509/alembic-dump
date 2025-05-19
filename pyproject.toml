@@ -55,6 +55,10 @@ keywords = [
 license = {file = "LICENSE"}
 
 [project.optional-dependencies]
+aws = [
+  "boto3>=1.28.0",
+  "boto3-stubs[secretsmanager]>=1.28.0",
+]
 dev = [
   "black",
   "ruff",
@@ -68,6 +72,9 @@ dev = [
   "sphinx-rtd-theme",
   "build",
   "twine>=4.0.0",
+]
+vault = [
+  "hvac>=1.0.0",
 ]
 
 [project.urls]

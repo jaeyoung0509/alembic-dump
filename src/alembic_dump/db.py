@@ -1,11 +1,13 @@
 import types
 from typing import Optional
 
+from pydantic import SecretStr
 from sqlalchemy import MetaData, Table, create_engine, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from .config import DBConfig
+from .secrets import SecretProvider, create_secret_provider
 
 
 class DBManager:
@@ -14,11 +16,60 @@ class DBManager:
         self._engine: Optional[Engine] = None
         self._metadata: Optional[MetaData] = None
         self._session_maker: Optional[sessionmaker] = None
+        self._secret_provider = None
+
+    def _get_secret_provider(self) -> Optional[SecretProvider]:
+        """Lazy initialization of secret provider"""
+        if self._secret_provider is None and self.config.secret_provider_config:
+            self._secret_provider = create_secret_provider(
+                self.config.secret_provider_config
+            )
+        return self._secret_provider
+
+    def _get_config_value(self, field_name: str) -> Optional[str]:
+        """Get configuration value, either directly or from secret provider"""
+        # First check if value is directly provided
+        value = getattr(self.config, field_name)
+        if value is not None:
+            if isinstance(value, SecretStr):
+                return value.get_secret_value()
+            return value
+
+        # If not directly provided and we have a secret provider, try to get from secret
+        secret_provider = self._get_secret_provider()
+        if secret_provider and self.config.secret_key_mapping:
+            secret_key = self.config.secret_key_mapping.get(field_name)
+            if secret_key:
+                return secret_provider.get_secret_value(secret_key)
+        return None
 
     @property
     def engine(self) -> Engine:
         if self._engine is None:
-            url = f"{self.config.driver}://{self.config.username}:{self.config.password.get_secret_value()}@{self.config.host}:{self.config.port or 5432}/{self.config.database}"
+            # Get all required values, either directly or from secret provider
+            username = self._get_config_value("username")
+            password = self._get_config_value("password")
+            host = self._get_config_value("host")
+            port = self._get_config_value("port")
+            database = self._get_config_value("database")
+
+            # Validate required fields
+            if not all([username, password, host, database]):
+                missing = []
+                if not username:
+                    missing.append("username")
+                if not password:
+                    missing.append("password")
+                if not host:
+                    missing.append("host")
+                if not database:
+                    missing.append("database")
+                raise ValueError(
+                    f"Missing required database configuration: {', '.join(missing)}"
+                )
+
+            # Construct database URL
+            url = f"{self.config.driver}://{username}:{password}@{host}:{port or 5432}/{database}"
             self._engine = create_engine(url, **self.config.options)
         return self._engine
 

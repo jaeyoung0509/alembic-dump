@@ -45,10 +45,12 @@ class SSHTunnelManager:
             ssh_host_key=None,
         )
 
+        if self._tunnel is None:
+            raise ValueError("tunnel can not be None")
         self._tunnel.start()
 
     def stop(self) -> None:
-        if self._tunnel is not None:
+        if self._tunnel is not None and self._tunnel.is_active:
             self._tunnel.stop()
             self._tunnel = None
 
