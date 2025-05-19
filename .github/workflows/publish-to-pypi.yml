@@ -31,13 +31,7 @@ jobs:
         run: |
           uv venv .venv --python ${{ matrix.python-version }}
           source .venv/bin/activate
-          uv pip install ".[dev]"
-
-      # - name: Run linters (Ruff, Black)
-      #   run: |
-      #     source .venv/bin/activate # 각 run 스텝마다 필요할 수 있음
-      #     uv run ruff check .
-      #     uv run black . --check
+          uv pip install ".[dev,aws,vault]"
 
       - name: Run tests (pytest)
         run: |
@@ -52,24 +46,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.9"
 
       - name: Install UV
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Install build dependencies
-        run: uv pip install build hatchling
+      - name: Setup virtual environment and install build dependencies
+        run: |
+          uv venv .venv
+          source .venv/bin/activate
+          uv pip install build hatchling
 
       - name: Build package
-        run: python -m build
+        run: |
+          source .venv/bin/activate
+          python -m build
 
-      - name: publish package to PyPI
+      - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN}}
+          password: ${{ secrets.PYPI_API_TOKEN }}
