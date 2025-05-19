@@ -1,13 +1,15 @@
-from typing import Any, Optional, TypedDict, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing_extensions import TypedDict
 
 from .secrets import AWSSecretsManagerConfig, HashiCorpVaultConfig
 
 
 class SecretKeyMapping(TypedDict, total=False):
     """Mapping of DBConfig fields to secret keys"""
+
     username: str
     password: str
     host: str
@@ -49,11 +51,13 @@ class DBConfig(BaseModel):
     options: dict[str, Any] = Field(default_factory=dict)
 
     # Secret provider configuration
-    secret_provider_config: Optional[Union[AWSSecretsManagerConfig, HashiCorpVaultConfig]] = None
+    secret_provider_config: Optional[
+        Union[AWSSecretsManagerConfig, HashiCorpVaultConfig]
+    ] = None
     # Mapping of DBConfig fields to secret keys
     secret_key_mapping: Optional[SecretKeyMapping] = Field(
         None,
-        description="Mapping of DBConfig fields to secret keys (e.g., {'username': 'db_user', 'password': 'db_pass'})"
+        description="Mapping of DBConfig fields to secret keys (e.g., {'username': 'db_user', 'password': 'db_pass'})",
     )
 
     def __init__(self, **data: Any) -> None:
@@ -64,8 +68,9 @@ class DBConfig(BaseModel):
         """Populate fields from secret provider if configured"""
         if self.secret_provider_config and self.secret_key_mapping:
             from .secrets import create_secret_provider
+
             provider = create_secret_provider(self.secret_provider_config)
-            
+
             for field, secret_key in self.secret_key_mapping.items():
                 if not isinstance(secret_key, str):
                     continue
@@ -95,15 +100,15 @@ class DBConfig(BaseModel):
                     "secret_provider_config": {
                         "provider_type": "aws_secrets_manager",
                         "secret_id": "arn:aws:secretsmanager:region:account:secret:db-credentials",
-                        "region_name": "us-west-2"
+                        "region_name": "us-west-2",
                     },
                     "secret_key_mapping": {
                         "host": "db_host",
                         "port": "db_port",
                         "username": "db_user",
-                        "password": "db_pass"
-                    }
-                }
+                        "password": "db_pass",
+                    },
+                },
             ]
         }
     }
