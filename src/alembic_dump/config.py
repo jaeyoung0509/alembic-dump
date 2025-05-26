@@ -207,6 +207,7 @@ class AppSettings(BaseSettings):
                         "default_salt": "my-secret-salt",
                     },
                     "chunk_size": 1000,
+                    "max_parallel_workers": 4
                 }
             ]
         },
@@ -221,4 +222,8 @@ class AppSettings(BaseSettings):
     tables_to_exclude: Optional[list[str]] = None
     chunk_size: int = Field(
         default=100000, description="Number of records to process in each chunk"
+    )
+    max_parallel_workers: Optional[int] = Field(
+        default=None,
+        description="Maximum number of tables to process in parallel. If None or 0, defaults to the number of CPU cores. Set to 1 for sequential processing."
     )

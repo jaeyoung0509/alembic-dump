@@ -2,23 +2,70 @@ import subprocess
 import types
 from typing import Optional
 import logging
+import concurrent.futures
+import os
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, Table # Added Table for type hinting
 from typing_extensions import Self
 
 from .config import AppSettings
-from .db import create_db_manager
+from .db import DBManager, create_db_manager # Added DBManager for type hinting
 from .ssh import SSHTunnelManager, create_ssh_tunnel
 from .utils import (
     apply_masking,
     chunk_iterable,
     get_alembic_version,
     get_db_config_for_connection,
-    get_sorted_tables,
+    get_parallel_execution_groups, # Changed from get_sorted_tables
 )
 
 logger = logging.getLogger(__name__)
 
+
+def _process_table_data(table: Table, source_db_manager: DBManager, target_db_manager: DBManager, settings: AppSettings, alembic_dir: str): # alembic_dir kept as per instruction
+    logger.info(f"Starting data processing for table: {table.name}")
+    try:
+        # Each thread needs its own session
+        with source_db_manager.get_session() as from_session, target_db_manager.get_session() as to_session:
+            rows = list(
+                from_session.execute(table.select()).mappings().all()
+            )
+            logger.debug(f"Fetched {len(rows)} rows from table {table.name} for processing.")
+
+            if not rows:
+                logger.info(f"No rows to process for table: {table.name}")
+                return f"No data for {table.name}"
+
+            for chunk in chunk_iterable(rows, settings.chunk_size):
+                logger.debug(f"Processing chunk of {len(chunk)} rows for table {table.name}.")
+                processed_chunk = []
+                for row_data in chunk:
+                    # Ensure row_data is a mutable dictionary for apply_masking
+                    mutable_row_data = dict(row_data)
+                    if settings.masking and settings.masking.rules and table.name in settings.masking.rules:
+                        # Log first 2 items by converting row_data (immutable mapping) to dict then slicing items
+                        log_preview = dict(list(mutable_row_data.items())[:2])
+                        logger.debug(f"Applying masking for table {table.name}, row preview: {log_preview}...")
+                        processed_chunk.append(
+                            apply_masking(
+                                mutable_row_data, # Use the mutable dict
+                                table.name,
+                                settings.masking.rules,
+                            )
+                        )
+                    else:
+                        processed_chunk.append(mutable_row_data) # Use the mutable dict
+                if processed_chunk:
+                    to_session.execute(table.insert(), processed_chunk)
+            to_session.commit()
+            logger.info(f"Successfully processed and committed data for table: {table.name}")
+            return f"Success: {table.name}"
+    except Exception as exc:
+        logger.exception(f"Error processing table {table.name}. Data for this table may not be migrated.")
+        # Re-raising will make future.result() throw this exception
+        raise
+    # Sessions are automatically closed by the 'with' statement if they are context managers.
+    # SQLAlchemy sessions obtained from sessionmaker() are context managers.
 
 def run_alembic_cmd(
     alembic_dir: str, db_url: str, cmd: str, revision: str = ""
@@ -108,57 +155,63 @@ def dump_and_load(settings: AppSettings, alembic_dir: str) -> None:
             sync_schema(from_db.engine, to_db.engine, alembic_dir)
             logger.info("Schema synchronization complete.")
 
-            from_session = from_db.get_session()
-            to_session = to_db.get_session()
+            # Removed main from_session and to_session initialization
 
             try:
-                # 테이블 순서 결정
-                tables = get_sorted_tables(from_db.get_metadata())
+                # 테이블 순서 결정 using parallel execution groups
+                all_metadata_tables = from_db.get_metadata() # Get metadata once
+                execution_groups = get_parallel_execution_groups(all_metadata_tables)
+                logger.info(f"Table execution groups for parallel processing: {[[t.name for t in group] for group in execution_groups]}")
 
                 tables_to_exclude_names = set(settings.tables_to_exclude or [])
-                tables = [t for t in tables if t.name not in tables_to_exclude_names]
-
-                if settings.tables_to_include:
-                    tables_to_include_names = set(settings.tables_to_include)
-                    tables = [t for t in tables if t.name in tables_to_include_names]
+                tables_to_exclude_names.add("alembic_version") # Always exclude alembic_version
+                logger.info(f"Final list of tables to exclude from data migration: {tables_to_exclude_names}")
                 
-                logger.info(f"Starting data migration for {len(tables)} tables. Tables to include: {settings.tables_to_include}, Tables to exclude: {settings.tables_to_exclude}.")
+                # Filter tables within each group
+                processed_execution_groups = []
+                for group in execution_groups:
+                    filtered_group = [t for t in group if t.name not in tables_to_exclude_names]
+                    if settings.tables_to_include:
+                        tables_to_include_names = set(settings.tables_to_include)
+                        filtered_group = [t for t in filtered_group if t.name in tables_to_include_names]
+                    if filtered_group:
+                        processed_execution_groups.append(filtered_group)
+                
+                logger.info(f"Starting data migration for {sum(len(g) for g in processed_execution_groups)} tables in {len(processed_execution_groups)} groups. Tables to include: {settings.tables_to_include}, Initial tables to exclude from settings: {settings.tables_to_exclude}.")
 
-                # 데이터 마이그레이션
-                for table in tables:
-                    logger.info(f"Processing table: {table.name}")
-                    rows = list(
-                        from_db.get_session().execute(table.select()).mappings().all()
-                    )
-                    logger.debug(f"Fetched {len(rows)} rows from table {table.name}.")
+                overall_success = True
+                for group_idx, group_tables in enumerate(processed_execution_groups):
+                    logger.info(f"Processing table group {group_idx + 1}/{len(processed_execution_groups)} with {len(group_tables)} table(s): {[t.name for t in group_tables]}.")
+                    
+                    # Use settings.max_parallel_workers or fallback to os.cpu_count()
+                    max_workers_setting = getattr(settings, 'max_parallel_workers', None) # Check if attribute exists
+                    max_workers = max_workers_setting if max_workers_setting and max_workers_setting > 0 else os.cpu_count()
+                    logger.info(f"Using up to {max_workers} workers for this group.")
 
-                    for chunk in chunk_iterable(rows, settings.chunk_size):
-                        logger.debug(f"Processing chunk of {len(chunk)} rows for table {table.name}.")
-                        processed_chunk = []
-                        for row_data in chunk:
-                            if settings.masking and settings.masking.rules and table.name in settings.masking.rules:
-                                logger.debug(f"Applying masking for table {table.name}")
-                                processed_chunk.append(
-                                    apply_masking(
-                                        dict(row_data),
-                                        table.name,
-                                        settings.masking.rules,
-                                    )
-                                )
-                            else:
-                                logger.debug(f"No masking configured for table {table.name}")
-                                processed_chunk.append(dict(row_data))
-                        if processed_chunk:
-                            to_session.execute(table.insert(), processed_chunk)
-                to_session.commit()
-                logger.info("Data migration committed successfully to target database.")
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        future_to_table = {executor.submit(_process_table_data, table, from_db, to_db, settings, alembic_dir): table for table in group_tables}
+                        
+                        for future in concurrent.futures.as_completed(future_to_table):
+                            table_obj = future_to_table[future]
+                            try:
+                                result = future.result() # This will raise an exception if the task raised one
+                                logger.info(f"Table {table_obj.name} processing completed: {result}")
+                            except Exception as exc_inner:
+                                logger.error(f"Table {table_obj.name} processing failed: {exc_inner}")
+                                overall_success = False # Mark that at least one table failed
+                                # Depending on desired strictness, one might want to raise here or break loops
+                
+                if not overall_success:
+                    logger.warning("One or more tables failed during the parallel data migration process. Check logs for details.")
+                    # Consider raising an error here if partial success is not acceptable
+                    # raise RuntimeError("Parallel data migration failed for one or more tables.")
+                else:
+                    logger.info("All table groups processed successfully.")
+
             except Exception as exc:
-                logger.exception("Error during dump and load process. Rolling back session.")
-                to_session.rollback()
+                logger.exception("Error during dump and load process.") # Removed session rollback
                 raise exc
-            finally:
-                from_session.close()
-                to_session.close()
+            # Removed finally block that closes from_session and to_session
     logger.info("Dump and load process completed.")
 
 

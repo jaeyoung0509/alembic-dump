@@ -203,3 +203,81 @@ def get_db_config_for_connection(
     db_config_to_use.port = active_ssh_tunnel.local_bind_address[1]
     db_config_to_use.host = active_ssh_tunnel.local_bind_address[0]
     return db_config_to_use
+
+
+def get_parallel_execution_groups(metadata: MetaData) -> list[list[Table]]:
+    """
+    Determines groups of tables that can be processed in parallel based on FK dependencies.
+
+    Args:
+        metadata: SQLAlchemy MetaData object.
+
+    Returns:
+        List of lists of Table objects, where each inner list is a group of tables
+        that can be processed in parallel.
+    """
+    all_tables = list(metadata.tables.values())
+    if not all_tables:
+        return []
+
+    table_map = {table.name: table for table in all_tables}
+    prerequisites: dict[str, set[str]] = {
+        table.name: {fk.column.table.name for fk in table.foreign_keys}
+        for table in all_tables
+    }
+
+    table_levels: dict[str, int] = {}  # Stores the calculated level for each table name
+    execution_groups: list[list[Table]] = []
+
+    while len(table_levels) < len(all_tables):
+        current_level_table_names: list[str] = []
+        for table in all_tables:
+            if table.name not in table_levels:
+                # Check if all prerequisites for this table are already in table_levels
+                if all(
+                    prereq_name in table_levels
+                    for prereq_name in prerequisites[table.name]
+                ):
+                    current_level_table_names.append(table.name)
+
+        if not current_level_table_names:
+            # If no tables can be added to the current level, but not all tables are processed,
+            # it indicates a cycle or an unhandled dependency.
+            if len(table_levels) < len(all_tables):
+                remaining_tables = [
+                    t.name for t in all_tables if t.name not in table_levels
+                ]
+                logger.warning(
+                    "Could not determine execution level for all tables. "
+                    "Potential cycle or unhandled dependency. Remaining tables: %s",
+                    remaining_tables,
+                )
+                # Add remaining tables as a single group to ensure they are processed,
+                # though not in parallel as originally intended for this batch.
+                # The caller can decide how to handle this (e.g., sequential processing).
+                # For now, we group them and let the process continue.
+                # This part could be adapted based on desired error handling (e.g., raise an exception).
+                if remaining_tables:
+                    current_level_idx = len(execution_groups)
+                    for name in remaining_tables:
+                        table_levels[name] = current_level_idx
+                    current_group_tables = [table_map[name] for name in remaining_tables]
+                    execution_groups.append(current_group_tables)
+                break  # Exit the main loop
+            else:
+                # All tables processed
+                break
+
+        current_level_idx = len(execution_groups)
+        for name in current_level_table_names:
+            table_levels[name] = current_level_idx
+
+        current_group_tables = [
+            table_map[name] for name in current_level_table_names
+        ]
+        execution_groups.append(current_group_tables)
+
+    logger.debug(
+        f"Determined parallel execution groups: {[[t.name for t in group] for group in execution_groups]}"
+    )
+    return execution_groups
