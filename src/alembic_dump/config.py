@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 class SecretKeyMapping(TypedDict, total=False):
-    """Mapping of DBConfig fields to secret keys"""
+    """
+    Defines a mapping from DBConfig field names (like 'username', 'password')
+    to the corresponding keys used to retrieve these values from a secret provider.
+    This allows flexibility in naming secrets within the provider.
+    All fields are optional, specify only the ones managed by the secret provider.
+    """
 
     username: str
     password: str
@@ -160,7 +165,12 @@ class MaskingConfig(BaseModel):
 
 
 class AppSettings(BaseSettings):
-    model_config = SettingsConfigDict(
+    """
+    Main application settings, loaded from environment variables or a .env file.
+    Defines configurations for source and target databases, SSH tunnels,
+    data masking, table filtering, and chunk size for data processing.
+    """
+    model_config = SettingsConfigDict
         env_file=".env",
         env_prefix="ALEMBIC_DUMP_",
         env_nested_delimiter="__",
@@ -193,7 +203,7 @@ class AppSettings(BaseSettings):
                     },
                     "target_ssh_tunnel": {
                         "host": "bastion-target.example.com",
-                        "port": 2222,  # 다른 포트 예시
+                        "port": 2222,  # Example of a different port
                         "username": "ssh_user_target",
                         "private_key_path": "~/.ssh/id_rsa_target",
                     },
@@ -219,6 +229,7 @@ class AppSettings(BaseSettings):
     masking: Optional[MaskingConfig] = None
     tables_to_include: Optional[list[str]] = None
     tables_to_exclude: Optional[list[str]] = None
+    # table_priorities field removed
     chunk_size: int = Field(
         default=100000, description="Number of records to process in each chunk"
     )
