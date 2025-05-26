@@ -12,7 +12,7 @@ from alembic_dump.ssh import SSHTunnelManager
 logger = logging.getLogger(__name__)
 
 
-from collections import deque
+# from collections import deque # Removed from here. The comments are also removed.
 
 def get_sorted_tables(metadata: MetaData) -> list[list[Table]]:
     """
