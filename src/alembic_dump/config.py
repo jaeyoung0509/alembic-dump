@@ -1,7 +1,23 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
+import logging
 
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing_extensions import TypedDict
+
+from .secrets import AWSSecretsManagerConfig, HashiCorpVaultConfig
+
+logger = logging.getLogger(__name__)
+
+
+class SecretKeyMapping(TypedDict, total=False):
+    """Mapping of DBConfig fields to secret keys"""
+
+    username: str
+    password: str
+    host: str
+    port: str
+    database: str
 
 
 class SSHConfig(BaseModel):
@@ -30,12 +46,51 @@ class DBConfig(BaseModel):
         description="Database driver (e.g., postgresql)",
         examples=["postgresql"],
     )
-    host: str
+    host: Optional[str] = None
     port: Optional[int] = None
-    username: str
-    password: SecretStr
-    database: str
+    username: Optional[str] = None
+    password: Optional[SecretStr] = None
+    database: Optional[str] = None
     options: dict[str, Any] = Field(default_factory=dict)
+
+    # Secret provider configuration
+    secret_provider_config: Optional[
+        Union[AWSSecretsManagerConfig, HashiCorpVaultConfig]
+    ] = None
+    # Mapping of DBConfig fields to secret keys
+    secret_key_mapping: Optional[SecretKeyMapping] = Field(
+        None,
+        description="Mapping of DBConfig fields to secret keys (e.g., {'username': 'db_user', 'password': 'db_pass'})",
+    )
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        logger.debug("DBConfig initialized. Attempting to populate from secret provider if configured.")
+        self._populate_from_secret_provider()
+
+    def _populate_from_secret_provider(self) -> None:
+        """Populate fields from secret provider if configured"""
+        if self.secret_provider_config and self.secret_key_mapping:
+            logger.info(f"Populating DBConfig fields from secret provider type: {self.secret_provider_config.provider_type if self.secret_provider_config else 'N/A'}.")
+            from .secrets import create_secret_provider
+
+            provider = create_secret_provider(self.secret_provider_config)
+
+            for field, secret_key in self.secret_key_mapping.items():
+                if not isinstance(secret_key, str):
+                    continue
+                logger.debug(f"Attempting to populate DBConfig field '{field}' from secret key '{secret_key}'.")
+                value = provider.get_secret_value(secret_key)
+                if value is not None:
+                    logger.debug(f"Successfully fetched value for DBConfig field '{field}' from secret provider.")
+                    if field == "password":
+                        setattr(self, field, SecretStr(value))
+                    elif field == "port":
+                        setattr(self, field, int(value))
+                    else:
+                        setattr(self, field, value)
+                else:
+                    logger.warning(f"No value found in secret provider for DBConfig field '{field}' using secret key '{secret_key}'.")
 
     model_config = {
         "json_schema_extra": {
@@ -47,7 +102,22 @@ class DBConfig(BaseModel):
                     "username": "db_user",
                     "password": "secret",
                     "database": "my_db",
-                }
+                },
+                {
+                    "driver": "postgresql",
+                    "database": "my_db",
+                    "secret_provider_config": {
+                        "provider_type": "aws_secrets_manager",
+                        "secret_id": "arn:aws:secretsmanager:region:account:secret:db-credentials",
+                        "region_name": "us-west-2",
+                    },
+                    "secret_key_mapping": {
+                        "host": "db_host",
+                        "port": "db_port",
+                        "username": "db_user",
+                        "password": "db_pass",
+                    },
+                },
             ]
         }
     }
