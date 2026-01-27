@@ -66,6 +66,39 @@ settings = AppSettings(
 dump_and_load(settings, alembic_dir="path/to/alembic")
 ```
 
+## Export API (MVP)
+
+Export data directly to CSV/JSONL/JSON using the Python API:
+
+```python
+from alembic_dump.config import DBConfig, MaskingConfig, MaskingRule
+from alembic_dump.db import create_db_manager
+from alembic_dump.export import ExportOptions, export_data
+
+db_config = DBConfig(
+    driver="postgresql",
+    host="localhost",
+    port=5432,
+    username="user",
+    password="pass",
+    database="app",
+)
+
+masking = MaskingConfig(rules={"users": {"email": MaskingRule(strategy="hash")}})
+
+options = ExportOptions(
+    format="jsonl",
+    output="users.jsonl",
+    table="users",
+    chunk_size=5000,
+)
+
+with create_db_manager(db_config) as db:
+    export_data(db.engine, options, masking=masking)
+```
+
+Query mode only allows SELECT/CTE statements by default. Use `unsafe_query=True` to disable safety checks. JSON array output is available via `format="json"` or `json_array=True`.
+
 ## Configuration
 
 Configuration can be provided through environment variables, a `.env` file, or directly in code using the `AppSettings` class.
@@ -174,6 +207,10 @@ ALEMBIC_DUMP_SOURCE_DB__SECRET_PROVIDER_CONFIG__VAULT_TOKEN=s.token
 3. Install development dependencies:
    ```bash
    pip install -e ".[dev]"
+   ```
+   Or with uv:
+   ```bash
+   uv sync --extra dev
    ```
 
 4. Run tests:
