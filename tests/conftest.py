@@ -331,6 +331,8 @@ def localstack_container(
     docker_client_session: DockerClient, test_docker_network: str
 ) -> dict[str, Union[str, int, Container]]:
     """LocalStack container for AWS Secrets Manager emulation"""
+    if boto3 is None:
+        pytest.skip("boto3 is not installed")
     container_name = f"localstack_secrets_test_{int(time.time())}"
     try:
         logger.info(f"Creating LocalStack container: {container_name}")
@@ -425,6 +427,8 @@ def vault_container(
     docker_client_session: DockerClient, test_docker_network: str
 ) -> dict[str, Union[str, int, Container]]:
     """HashiCorp Vault container for secret management testing"""
+    if hvac is None:
+        pytest.skip("hvac is not installed")
     container_name = f"vault_test_{int(time.time())}"
     try:
         logger.info(f"Creating Vault container: {container_name}")

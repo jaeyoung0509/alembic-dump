@@ -146,12 +146,11 @@ def test_full_dump_and_load(
         user=target_pg_container["user"],
         password=target_pg_container["password"],
         dbname=target_pg_container["database"],
-    ) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT name, email FROM users WHERE id=1")
-            row = cur.fetchone()
-            assert row is not None, "Data not found in target DB (direct connection)"
-            assert row[0] == "홍길동 직통"
-            assert row[1] == "hong_direct@test.com"
+    ) as conn, conn.cursor() as cur:
+        cur.execute("SELECT name, email FROM users WHERE id=1")
+        row = cur.fetchone()
+        assert row is not None, "Data not found in target DB (direct connection)"
+        assert row[0] == "홍길동 직통"
+        assert row[1] == "hong_direct@test.com"
     logger.info("Data successfully verified in target DB for direct connection test.")
     logger.info("test_full_dump_and_load (direct connection) finished successfully.")
