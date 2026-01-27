@@ -7,7 +7,7 @@ description = "A Python library to dump, load, and mask data between databases i
 name = "alembic-dump"
 readme = "README.md"
 requires-python = ">=3.9"
-version = "0.1.7"
+version = "0.1.8"
 
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -25,7 +25,7 @@ classifiers = [
   "Topic :: Utilities",
 ]
 
-authors = [{name = "Jaeyoung", email = "jaeyoung0509@naver.com"}]
+authors = [{ name = "Jaeyoung", email = "jaeyoung0509@naver.com" }]
 dependencies = [
   "sqlalchemy>=2.0.0",
   "alembic>=1.12.0",
@@ -34,6 +34,7 @@ dependencies = [
   "pydantic-settings>=2.0.0",
   "faker>=18.0.0",
   "python-dotenv>=1.0.0",
+  "tomli>=2.0.0; python_version < '3.11'",
 ]
 keywords = [
   "alembic",
@@ -52,13 +53,10 @@ keywords = [
   "ssh",
   "tunnel",
 ]
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 
 [project.optional-dependencies]
-aws = [
-  "boto3>=1.28.0",
-  "boto3-stubs[secretsmanager]>=1.28.0",
-]
+aws = ["boto3>=1.28.0", "boto3-stubs[secretsmanager,dynamodb]>=1.28.0"]
 dev = [
   "black",
   "ruff",
@@ -72,13 +70,15 @@ dev = [
   "sphinx-rtd-theme",
   "build",
   "twine>=4.0.0",
-]
-vault = [
+  "boto3>=1.28.0",
+  "boto3-stubs[secretsmanager,dynamodb]>=1.28.0",
   "hvac>=1.0.0",
 ]
+vault = ["hvac>=1.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/jaeyoung0509/alembic-dump"
+
 
 [tool.black]
 line-length = 88
