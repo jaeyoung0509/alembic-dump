@@ -1,5 +1,5 @@
-from typing import Any, Optional, Union
 import logging
+from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -65,13 +65,17 @@ class DBConfig(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        logger.debug("DBConfig initialized. Attempting to populate from secret provider if configured.")
+        logger.debug(
+            "DBConfig initialized. Attempting to populate from secret provider if configured."
+        )
         self._populate_from_secret_provider()
 
     def _populate_from_secret_provider(self) -> None:
         """Populate fields from secret provider if configured"""
         if self.secret_provider_config and self.secret_key_mapping:
-            logger.info(f"Populating DBConfig fields from secret provider type: {self.secret_provider_config.provider_type if self.secret_provider_config else 'N/A'}.")
+            logger.info(
+                f"Populating DBConfig fields from secret provider type: {self.secret_provider_config.provider_type if self.secret_provider_config else 'N/A'}."
+            )
             from .secrets import create_secret_provider
 
             provider = create_secret_provider(self.secret_provider_config)
@@ -79,10 +83,14 @@ class DBConfig(BaseModel):
             for field, secret_key in self.secret_key_mapping.items():
                 if not isinstance(secret_key, str):
                     continue
-                logger.debug(f"Attempting to populate DBConfig field '{field}' from secret key '{secret_key}'.")
+                logger.debug(
+                    f"Attempting to populate DBConfig field '{field}' from secret key '{secret_key}'."
+                )
                 value = provider.get_secret_value(secret_key)
                 if value is not None:
-                    logger.debug(f"Successfully fetched value for DBConfig field '{field}' from secret provider.")
+                    logger.debug(
+                        f"Successfully fetched value for DBConfig field '{field}' from secret provider."
+                    )
                     if field == "password":
                         setattr(self, field, SecretStr(value))
                     elif field == "port":
@@ -90,7 +98,9 @@ class DBConfig(BaseModel):
                     else:
                         setattr(self, field, value)
                 else:
-                    logger.warning(f"No value found in secret provider for DBConfig field '{field}' using secret key '{secret_key}'.")
+                    logger.warning(
+                        f"No value found in secret provider for DBConfig field '{field}' using secret key '{secret_key}'."
+                    )
 
     model_config = {
         "json_schema_extra": {
@@ -222,3 +232,36 @@ class AppSettings(BaseSettings):
     chunk_size: int = Field(
         default=100000, description="Number of records to process in each chunk"
     )
+
+
+class ExportConfig(BaseModel):
+    format: str = Field(default="jsonl", description="Export format")
+    output: str = Field(default="-", description="Output path or '-' for stdout")
+    chunk_size: int = Field(default=100000, description="Rows per chunk")
+    encoding: str = Field(default="utf-8", description="Output encoding")
+    delimiter: str = Field(default=",", description="CSV delimiter")
+    null_value: str = Field(default="", description="CSV null value placeholder")
+    include_header: bool = Field(default=True, description="Include CSV header")
+    ensure_ascii: bool = Field(default=False, description="JSON ensure_ascii option")
+    json_array: bool = Field(default=False, description="Emit JSON array instead of JSONL")
+    decimal_as: Literal["string", "float"] = Field(
+        default="string", description="Decimal serialization strategy"
+    )
+    bytes_as: Literal["base64", "hex"] = Field(
+        default="base64", description="Bytes serialization strategy"
+    )
+
+
+class ExportSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="ALEMBIC_DUMP_",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    source_db: DBConfig
+    source_ssh_tunnel: Optional[SSHConfig] = None
+    masking: Optional[MaskingConfig] = None
+    export: Optional[ExportConfig] = None

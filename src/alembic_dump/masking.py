@@ -1,9 +1,9 @@
 import hashlib
+import logging
 import random
 import re
 import string
 from typing import Any, Callable
-import logging
 
 from .config import MaskingConfig, MaskingRule
 

@@ -1,6 +1,6 @@
+import logging
 import types
 from typing import Optional
-import logging
 
 from pydantic import SecretStr
 from sqlalchemy import MetaData, Table, create_engine, inspect
@@ -74,7 +74,7 @@ class DBManager:
                 raise ValueError(
                     f"Missing required database configuration: {', '.join(missing)}"
                 )
-            
+
             logger.info(f"Creating SQLAlchemy engine for {self.config.driver} accessing database '{database}' on host '{host}'.")
             # Construct database URL
             url = f"{self.config.driver}://{username}:{password or ''}@{host}:{port or 5432}/{database}"
