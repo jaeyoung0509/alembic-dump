@@ -189,7 +189,8 @@ class HashiCorpVaultProvider:
         """Get a specific secret value by key name"""
         try:
             response = self._get_client().secrets.kv.v2.read_secret_version(
-                path=self.config.secret_path
+                path=self.config.secret_path,
+                raise_on_deleted_version=True,
             )
             if response and "data" in response and "data" in response["data"]:
                 return response["data"]["data"].get(key_name)
@@ -201,7 +202,8 @@ class HashiCorpVaultProvider:
         """Get all secrets as a dictionary"""
         try:
             response = self._get_client().secrets.kv.v2.read_secret_version(
-                path=self.config.secret_path
+                path=self.config.secret_path,
+                raise_on_deleted_version=True,
             )
             if response and "data" in response and "data" in response["data"]:
                 return response["data"]["data"]

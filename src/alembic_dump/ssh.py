@@ -1,7 +1,7 @@
+import logging
 from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Optional
-import logging
 
 from sshtunnel import SSHTunnelForwarder  # type: ignore
 from typing_extensions import Self
@@ -33,7 +33,7 @@ class SSHTunnelManager:
     def start(self) -> None:
         if self.is_active:
             return
-        
+
         logger.info(f"Starting SSH tunnel: {self.ssh_config.username}@{self.ssh_config.host}:{self.ssh_config.port} -> remote {self.db_config.host}:{self.db_config.port or 5432}.")
         self._tunnel = SSHTunnelForwarder(
             ssh_address_or_host=(self.ssh_config.host, self.ssh_config.port),
